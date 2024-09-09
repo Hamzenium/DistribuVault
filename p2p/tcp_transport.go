@@ -112,17 +112,17 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 	}
 
 	// Create a placeholder for incoming messages.
-	msg := &Message{}
+	rpc := &RPC{}
 
 	// Infinite loop to continuously decode messages from the connection.
 	for {
 		// Attempt to decode data from the connection into the 'msg' variable.
 		// If an error occurs during decoding, it is logged, but the loop continues
 		// to keep the connection alive unless explicitly terminated elsewhere.
-		if err := t.Decoder.Decode(conn, msg); err != nil {
+		if err := t.Decoder.Decode(conn, rpc); err != nil {
 			fmt.Printf("TCP error: %s\n", err)
 			continue
 		}
-		fmt.Printf("Message: %+v\n", msg)
+		fmt.Printf("Message: %+v\n", rpc)
 	}
 }
