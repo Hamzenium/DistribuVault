@@ -24,10 +24,15 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+type TCPTransportOpts struct {
+	ListenAddr    string
+	HandshakeFunc HandshakeFunc
+	Decoder       Decoder
+}
+
 type TCPTransport struct {
-	listenAddress string
-	listener      net.Listener
-	handshakeFunc HandshakeFunc
+	TCPTransportOpts
+	listener net.Listener
 
 	mu    sync.RWMutex
 	peers map[net.Addr]Peer
@@ -39,10 +44,9 @@ type TCPTransport struct {
 // NewTCPTransport is the name of the function. By convention, constructor functions in Go often start with New.
 // listenAddr string is the parameter, which specifies the address to listen on.
 // *TCPTransport is the return type of the function, indicating it returns a pointer to a TCPTransport struct.
-func NewTCPTransport(listenAddr string) *TCPTransport {
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		handshakeFunc: NOPHandShakeFunc,
-		listenAddress: listenAddr,
+		TCPTransportOpts: opts,
 	}
 }
 
@@ -60,7 +64,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 	// If successful, it assigns the listener to t.listener. \
 	//If it fails, err will contain the error.
 	var err error
-	t.listener, err = net.Listen("tcp", t.listenAddress)
+	t.listener, err = net.Listen("tcp", t.ListenAddr)
 	if err != nil {
 		return err
 	}
@@ -91,18 +95,33 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 
-func (t *TCPTransport) handleConn(conn net.Conn) {
-	peer := NewTCPPeer(conn, true)
-	if err := t.handshakeFunc(conn); err != nil {
+type Temp struct{}
 
+// handleConn manages an individual TCP connection.
+func (t *TCPTransport) handleConn(conn net.Conn) {
+	// Create a new TCP peer object using the connection.
+	// The 'true' parameter likely indicates that this is an incoming connection.
+	peer := NewTCPPeer(conn, true)
+
+	// Perform a handshake to establish communication protocols between peers.
+	// If the handshake fails, the connection is closed and an error is logged.
+	if err := t.HandshakeFunc(peer); err != nil {
+		conn.Close()
+		fmt.Printf("TCP handshake error: %s\n", err)
+		return
 	}
-	lenDecodeError := 
+
+	// Create a placeholder for incoming messages.
 	msg := &Temp{}
+
+	// Infinite loop to continuously decode messages from the connection.
 	for {
-		if err := t.decoder.Decode(conn, msg) ; err != nil  {
+		// Attempt to decode data from the connection into the 'msg' variable.
+		// If an error occurs during decoding, it is logged, but the loop continues
+		// to keep the connection alive unless explicitly terminated elsewhere.
+		if err := t.Decoder.Decode(conn, msg); err != nil {
 			fmt.Printf("TCP error: %s\n", err)
 			continue
 		}
 	}
-	fmt.Printf(("new incoming connection %+v\n"), peer)
 }
