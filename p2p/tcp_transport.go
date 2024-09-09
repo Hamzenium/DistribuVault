@@ -112,7 +112,7 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 	}
 
 	// Create a placeholder for incoming messages.
-	msg := &Temp{}
+	msg := &Message{}
 
 	// Infinite loop to continuously decode messages from the connection.
 	for {
@@ -123,5 +123,6 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 			fmt.Printf("TCP error: %s\n", err)
 			continue
 		}
+		fmt.Printf("Message: %+v\n", msg)
 	}
 }
