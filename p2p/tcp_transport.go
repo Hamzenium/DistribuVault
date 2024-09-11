@@ -24,6 +24,11 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+// implements the peer interface
+func (p *TCPPeer) Close() error {
+	return p.conn.Close()
+}
+
 type TCPTransportOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
@@ -33,6 +38,7 @@ type TCPTransportOpts struct {
 type TCPTransport struct {
 	TCPTransportOpts
 	listener net.Listener
+	rpcch    chan RPC
 
 	mu    sync.RWMutex
 	peers map[net.Addr]Peer
@@ -47,7 +53,14 @@ type TCPTransport struct {
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
+		rpcch:            make(chan RPC),
 	}
+}
+
+// consume implements the Transport interface, which will read-only channel
+// for reading the incoming messages recieved from another peer in the network
+func (t *TCPTransport) Consume() <-chan RPC {
+	return t.rpcch
 }
 
 // func indicates a function.
@@ -112,18 +125,19 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 	}
 
 	// Create a placeholder for incoming messages.
-	rpc := &RPC{}
+	rpc := RPC{}
 
 	// Infinite loop to continuously decode messages from the connection.
 	for {
 		// Attempt to decode data from the connection into the 'msg' variable.
 		// If an error occurs during decoding, it is logged, but the loop continues
 		// to keep the connection alive unless explicitly terminated elsewhere.
-		if err := t.Decoder.Decode(conn, rpc); err != nil {
+		if err := t.Decoder.Decode(conn, &rpc); err != nil {
 			fmt.Printf("TCP error: %s\n", err)
 			continue
 		}
 		rpc.From = conn.RemoteAddr()
 		fmt.Printf("Message: %+v\n", rpc)
+		t.rpcch <- rpc
 	}
 }
