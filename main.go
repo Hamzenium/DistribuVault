@@ -1,40 +1,71 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"time"
 
 	"github.com/Hamzenium/Distributed-CAS-Storage/p2p"
 )
 
-// main initializes and runs the TCP-based peer-to-peer transport system.
+func makeServer(listenAddr string, nodes ...string) *FileServer {
+	tcptransportOpts := p2p.TCPTransportOpts{
+		ListenAddr:    listenAddr,
+		HandshakeFunc: p2p.NOPHandshakeFunc,
+		Decoder:       p2p.DefaultDecoder{},
+	}
+	tcpTransport := p2p.NewTCPTransport(tcptransportOpts)
+
+	fileServerOpts := FileServerOpts{
+		EncKey:            newEncryptionKey(),
+		StorageRoot:       listenAddr + "_network",
+		PathTransformFunc: CASPathTransformFunc,
+		Transport:         tcpTransport,
+		BootstrapNodes:    nodes,
+	}
+
+	s := NewFileServer(fileServerOpts)
+
+	tcpTransport.OnPeer = s.OnPeer
+
+	return s
+}
+
 func main() {
-	// Configure the TCP transport options
-	tcpOpts := p2p.TCPTransportOpts{
-		ListenAddr:    ":3000",              // Address to listen for incoming connections (port 3000)
-		HandshakeFunc: p2p.NOPHandShakeFunc, // No-operation handshake function (placeholder)
-		Decoder:       p2p.DefaultDecoder{}, // Default decoder for reading messages
-	}
+	s1 := makeServer(":3000", "")
+	s2 := makeServer(":7000", "")
+	s3 := makeServer(":5000", ":3000", ":7000")
 
-	// Create a new TCP transport instance with the specified options
-	tr := p2p.NewTCPTransport(tcpOpts)
+	go func() { log.Fatal(s1.Start()) }()
+	time.Sleep(500 * time.Millisecond)
+	go func() { log.Fatal(s2.Start()) }()
 
-	// Start a goroutine to handle and print incoming messages
-	go func() {
-		for {
-			// Receive a message from the transport's consume channel
-			msg := <-tr.Consume() // Assuming Consume() returns a channel for incoming messages
-			// Print the received message
-			fmt.Printf("%+v\n", msg) // Fixed the newline character from /n to \n
+	time.Sleep(2 * time.Second)
+
+	go s3.Start()
+	time.Sleep(2 * time.Second)
+
+	for i := 0; i < 20; i++ {
+		key := fmt.Sprintf("picture_%d.png", i)
+		data := bytes.NewReader([]byte("my big data file here!"))
+		s3.Store(key, data)
+
+		if err := s3.store.Delete(s3.ID, key); err != nil {
+			log.Fatal(err)
 		}
-	}()
 
-	// Start listening for incoming connections
-	if err := tr.ListenAndAccept(); err != nil {
-		// Log and terminate if there's an error while starting the transport
-		log.Fatal(err)
+		r, err := s3.Get(key)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		b, err := ioutil.ReadAll(r)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(string(b))
 	}
-
-	// Block the main goroutine indefinitely to keep the program running
-	select {}
 }
