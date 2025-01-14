@@ -2,17 +2,6 @@
 
 A distributed content-addressed storage (CAS) system designed to enable users to store and retrieve files across multiple peer nodes. This system leverages a decentralized architecture, providing features such as secure file storage, encryption, and peer-to-peer (P2P) communication. It allows multiple peers (servers) to share their storage resources, ensuring that data is replicated and accessible without relying on a central authority.
 
-## Table of Contents
-
-- [About](#about)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [License](#license)
-- [Contributing](#contributing)
-
 ## About
 
 Distributed CAS Storage offers a decentralized file storage solution that allows users to upload, store, and retrieve files securely across multiple peers. The system works by utilizing content-based addressing (hashing), which ensures that files can be reliably identified and retrieved without the need for a central server. Data is encrypted both during transfer and while stored in the network, providing enhanced security.
