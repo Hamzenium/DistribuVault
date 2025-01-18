@@ -1,4 +1,4 @@
-# Distributed CAS Storage
+# DistribuVault
 
 A distributed content-addressed storage (CAS) system designed to enable users to store and retrieve files across multiple peer nodes. This system leverages a decentralized architecture, providing features such as secure file storage, encryption, and peer-to-peer (P2P) communication. It allows multiple peers (servers) to share their storage resources, ensuring that data is replicated and accessible without relying on a central authority.
 
@@ -56,4 +56,4 @@ Before you can run this system, ensure that you have the following tools install
 First, clone the repository from GitHub to your local machine using Git:
 
 ```bash
-git clone https://github.com/Hamzenium/Distributed-CAS-Storage.git
+git clone https://github.com/Hamzenium/DistribuVault.git
